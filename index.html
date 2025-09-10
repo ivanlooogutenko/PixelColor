@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P5.js Mosaic</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Forum&display=swap" rel="stylesheet">
 
     <style>
         /* Стили для страницы, палитры и холста */
         body {
-            font-family: 'Times New Roman', Times, serif;
+            font-family: 'Forum', 'Times New Roman', Times, serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -20,7 +23,8 @@
             box-sizing: border-box; /* Учитываем padding в общей ширине */
         }
         h1 {
-            font-weight: normal;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
             text-transform: uppercase;
             text-align: center;
         }
@@ -88,7 +92,7 @@
     </style>
 </head>
 <body>
-    <h1>Римская Мозаика</h1>
+    <h1>Antique Mosaic</h1>
 
     <main id="canvas-container"></main>
 
