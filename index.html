@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P5.js Mosaic</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+
+    <style>
+        /* Стили для страницы, палитры и холста */
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fdf6e3;
+            color: #5a4e46;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box; /* Учитываем padding в общей ширине */
+        }
+        h1 {
+            font-weight: normal;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        /* Контейнер для палитры */
+        #palette-container {
+            display: flex;
+            flex-wrap: wrap; /* Позволяем переносить элементы */
+            justify-content: center; /* Центрируем палитру */
+            gap: 15px;
+            padding: 15px;
+            margin-top: 20px;
+            background-color: rgba(161, 136, 127, 0.2);
+            border-radius: 20px;
+        }
+        .color-box {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+        }
+        .color-box.selected {
+            transform: scale(1.15);
+            box-shadow: 0 0 15px rgba(100, 80, 80, 0.8);
+        }
+        /* Стиль для холста p5.js */
+        canvas {
+            border: 10px solid #a1887f;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2), inset 0 0 15px rgba(0,0,0,0.3);
+            max-width: 100%;     /* Холст не будет вылезать за пределы экрана */
+            height: auto;        /* Сохраняем пропорции */
+            display: block;
+        }
+        main#canvas-container {
+            max-width: 100%;
+        }
+
+        /* Адаптация для мобильных устройств */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            #palette-container {
+                gap: 10px;
+                padding: 10px;
+            }
+            .color-box {
+                width: 40px;
+                height: 40px;
+            }
+            canvas {
+                border-width: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Римская Мозаика</h1>
+
+    <main id="canvas-container"></main>
+
+    <div id="palette-container"></div>
+    
+    <script>
+        // --- ДАННЫЕ (как и раньше) ---
+        const artData = {
+            width: 10,
+            height: 10,
+            palette: [
+                { id: 1, color: "#4CAF50" }, // Зеленый
+                { id: 2, color: "#FFC107" }, // Желтый
+                { id: 3, color: "#2196F3" }  // Синий
+            ],
+            pixels: [
+                { x: 4, y: 0, paletteId: 2 }, { x: 5, y: 0, paletteId: 2 },
+                { x: 3, y: 1, paletteId: 2 }, { x: 6, y: 1, paletteId: 2 },
+                { x: 2, y: 2, paletteId: 2 }, { x: 7, y: 2, paletteId: 2 },
+                { x: 2, y: 3, paletteId: 2 }, { x: 7, y: 3, paletteId: 2 },
+                { x: 0, y: 4, paletteId: 1 }, { x: 1, y: 4, paletteId: 1 }, { x: 8, y: 4, paletteId: 1 }, { x: 9, y: 4, paletteId: 1 },
+                { x: 0, y: 5, paletteId: 1 }, { x: 2, y: 5, paletteId: 3 }, { x: 3, y: 5, paletteId: 3 }, { x: 4, y: 5, paletteId: 3 }, { x: 5, y: 5, paletteId: 3 }, { x: 6, y: 5, paletteId: 3 }, { x: 7, y: 5, paletteId: 3 }, { x: 9, y: 5, paletteId: 1 },
+                { x: 0, y: 6, paletteId: 1 }, { x: 2, y: 6, paletteId: 3 }, { x: 7, y: 6, paletteId: 3 }, { x: 9, y: 6, paletteId: 1 },
+                { x: 0, y: 7, paletteId: 1 }, { x: 2, y: 7, paletteId: 3 }, { x: 7, y: 7, paletteId: 3 }, { x: 9, y: 7, paletteId: 1 },
+                { x: 0, y: 8, paletteId: 1 }, { x: 3, y: 8, paletteId: 1 }, { x: 4, y: 8, paletteId: 1 }, { x: 5, y: 8, paletteId: 1 }, { x: 6, y: 8, paletteId: 1 }, { x: 9, y: 8, paletteId: 1 },
+                { x: 0, y: 9, paletteId: 1 }, { x: 9, y: 9, paletteId: 1 }
+            ]
+        };
+
+        // --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
+        let stoneSize;
+        let stones = [];
+        let selectedColorId = null;
+        let isPaletteGenerated = false;
+
+        function setup() {
+            createCanvas(100, 100).parent('canvas-container'); // Временный холст
+            initializeMosaic();
+            if (!isPaletteGenerated) {
+                generatePalette();
+                isPaletteGenerated = true;
+            }
+            noLoop();
+        }
+
+        function windowResized() {
+            initializeMosaic();
+        }
+
+        function initializeMosaic() {
+            // Рассчитываем размер камня исходя из размера окна
+            const padding = 40; // Отступы по бокам
+            const availableWidth = windowWidth - padding;
+            // Оставляем место для палитры и заголовка
+            const availableHeight = windowHeight * 0.6; 
+            
+            const sizeFromWidth = availableWidth / artData.width;
+            const sizeFromHeight = availableHeight / artData.height;
+            
+            stoneSize = floor(min(sizeFromWidth, sizeFromHeight));
+
+            let canvasWidth = artData.width * stoneSize;
+            let canvasHeight = artData.height * stoneSize;
+
+            resizeCanvas(canvasWidth, canvasHeight);
+
+            stones = [];
+            let stoneMap = new Map();
+            artData.pixels.forEach(p => stoneMap.set(`${p.x},${p.y}`, p.paletteId));
+
+            for (let y = 0; y < artData.height; y++) {
+                for (let x = 0; x < artData.width; x++) {
+                    stones.push(new Stone(x, y, stoneMap.get(`${x},${y}`)));
+                }
+            }
+            redraw();
+        }
+
+        function draw() {
+            background('#d7ccc8');
+            for (let stone of stones) {
+                stone.draw();
+            }
+        }
+        
+        function mousePressed() {
+            if (mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height) return;
+            
+            const gridX = floor(mouseX / stoneSize);
+            const gridY = floor(mouseY / stoneSize);
+            
+            // Проверяем, что координаты в пределах массива
+            if (gridX >= 0 && gridX < artData.width && gridY >= 0 && gridY < artData.height) {
+                const clickedStone = stones[gridY * artData.width + gridX];
+                if (clickedStone && selectedColorId == clickedStone.correctColorId) {
+                    clickedStone.isColored = true;
+                    redraw();
+                }
+            }
+        }
+
+        class Stone {
+            constructor(x, y, correctColorId) {
+                this.gridX = x;
+                this.gridY = y;
+                this.correctColorId = correctColorId;
+                this.isColored = false;
+                this.updatePosition();
+                // Уникальное "зерно" для шума, чтобы узоры не повторялись
+                this.noiseSeed = random(1000); 
+            }
+
+            updatePosition() {
+                this.px = this.gridX * stoneSize;
+                this.py = this.gridY * stoneSize;
+                this.vertices = this.generateShape();
+            }
+            
+            generateShape() {
+                const jitter = stoneSize * 0.25;
+                let shape = [];
+                shape.push(createVector(this.px + random(-jitter, jitter), this.py + random(-jitter, jitter)));
+                shape.push(createVector(this.px + stoneSize + random(-jitter, jitter), this.py + random(-jitter, jitter)));
+                shape.push(createVector(this.px + stoneSize + random(-jitter, jitter), this.py + stoneSize + random(-jitter, jitter)));
+                shape.push(createVector(this.px + random(-jitter, jitter), this.py + stoneSize + random(-jitter, jitter)));
+                return shape;
+            }
+
+            // ⭐ НОВАЯ ФУНКЦИЯ ДЛЯ ОТРИСОВКИ ТЕКСТУРЫ ⭐
+            drawTexture() {
+                // Создаем "маску" по форме камня, чтобы текстура не вылезала за края
+                drawingContext.save();
+                beginShape();
+                for (let v of this.vertices) {
+                    vertex(v.x, v.y);
+                }
+                endShape(CLOSE);
+                drawingContext.clip();
+
+                // Рисуем несколько "прожилок" с помощью шума
+                for (let i = 0; i < 3; i++) { // 3 главные вены
+                    let veinX = this.px + stoneSize / 2;
+                    let veinY = this.py - 10; // Начинаем чуть сверху
+                    
+                    // У каждой вены свой уникальный путь
+                    let noiseShift = i * 100;
+
+                    for (let j = 0; j < 50; j++) { // Вена состоит из 50 сегментов
+                        // Шум Перлина определяет угол движения
+                        let angle = noise(this.noiseSeed + veinX * 0.05, this.noiseSeed + veinY * 0.05 + noiseShift) * TWO_PI * 2;
+                        
+                        veinX += cos(angle) * 2;
+                        veinY += sin(angle) * 2;
+                        
+                        // Рисуем полупрозрачный эллипс как сегмент вены
+                        noStroke();
+                        fill(255, 255, 255, 30); // Полупрозрачный белый
+                        ellipse(veinX, veinY, 3, 3);
+                    }
+                }
+                drawingContext.restore(); // Снимаем маску
+            }
+            
+            draw() {
+                // 1. Рисуем основную форму и цвет камня
+                stroke(90, 80);
+                strokeWeight(2);
+                
+                let baseColor;
+                if (this.isColored) {
+                    const colorInfo = artData.palette.find(p => p.id === this.correctColorId);
+                    baseColor = color(colorInfo.color);
+                } else {
+                    baseColor = color('#eceff1');
+                }
+                fill(baseColor);
+                
+                beginShape();
+                for (let v of this.vertices) {
+                    vertex(v.x, v.y);
+                }
+                endShape(CLOSE);
+
+                // 2. ⭐ Рисуем текстуру поверх основного цвета
+                if (this.isColored) {
+                    this.drawTexture();
+                }
+                
+                // 3. Рисуем номер, если нужно
+                if (!this.isColored && this.correctColorId) {
+                    noStroke();
+                    fill(50);
+                    textAlign(CENTER, CENTER);
+                    textSize(stoneSize * 0.4);
+                    text(this.correctColorId, this.px + stoneSize / 2, this.py + stoneSize / 2);
+                }
+            }
+        }
+
+        function generatePalette() {
+            const paletteContainer = document.getElementById('palette-container');
+            paletteContainer.innerHTML = ''; // Очищаем палитру перед генерацией
+            artData.palette.forEach(colorItem => {
+                const colorBox = document.createElement('div');
+                colorBox.className = 'color-box';
+                colorBox.style.backgroundColor = colorItem.color;
+                colorBox.dataset.colorId = colorItem.id;
+                colorBox.textContent = colorItem.id;
+                
+                colorBox.addEventListener('click', () => {
+                    const currentSelected = document.querySelector('.color-box.selected');
+                    if (currentSelected) {
+                        currentSelected.classList.remove('selected');
+                    }
+                    colorBox.classList.add('selected');
+                    selectedColorId = colorItem.id;
+                });
+                paletteContainer.appendChild(colorBox);
+            });
+        }
+
+    </script>
+</body>
+</html>
