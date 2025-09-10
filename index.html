@@ -14,7 +14,7 @@
             flex-direction: column;
             align-items: center;
             background-color: #fdf6e3;
-            color: #5a4e46;
+            color: #1b1714;
             margin: 0;
             padding: 20px;
             box-sizing: border-box; /* Учитываем padding в общей ширине */
@@ -32,7 +32,7 @@
             gap: 15px;
             padding: 15px;
             margin-top: 20px;
-            background-color: rgba(161, 136, 127, 0.2);
+            background-color: rgb(19, 14, 12);
             border-radius: 20px;
         }
         .color-box {
@@ -51,11 +51,11 @@
         }
         .color-box.selected {
             transform: scale(1.15);
-            box-shadow: 0 0 15px rgba(100, 80, 80, 0.8);
+            box-shadow: 0 0 15px rgba(23, 19, 19, 0.8);
         }
         /* Стиль для холста p5.js */
         canvas {
-            border: 10px solid #a1887f;
+            border: 10px solid #191412;
             box-shadow: 0 10px 20px rgba(0,0,0,0.2), inset 0 0 15px rgba(0,0,0,0.3);
             max-width: 100%;     /* Холст не будет вылезать за пределы экрана */
             height: auto;        /* Сохраняем пропорции */
@@ -96,6 +96,7 @@
     
     <script>
         // --- ДАННЫЕ (как и раньше) ---
+        const MORTAR_COLOR = '#1b1714'; // более тёмный фон/затирка
         const artData = {
             width: 10,
             height: 10,
@@ -138,6 +139,12 @@
             initializeMosaic();
         }
 
+        // --- Глобальные структуры для согласованных кривых рёбер ---
+        let gridPts = [];   // [y][x] точки узлов сетки (width+1 x height+1)
+        let edgesH = [];    // горизонтальные рёбра [y][x] (y:0..h, x:0..w-1)
+        let edgesV = [];    // вертикальные рёбра [y][x] (y:0..h-1, x:0..w)
+        let globalSeed = 1337; // фиксированное зерно для детерминированности
+
         function initializeMosaic() {
             // Рассчитываем размер камня исходя из размера окна
             const padding = 40; // Отступы по бокам
@@ -155,6 +162,9 @@
 
             resizeCanvas(canvasWidth, canvasHeight);
 
+            // Генерируем согласованные точки и кривые рёбра
+            buildGridAndEdges();
+
             stones = [];
             let stoneMap = new Map();
             artData.pixels.forEach(p => stoneMap.set(`${p.x},${p.y}`, p.paletteId));
@@ -167,11 +177,74 @@
             redraw();
         }
 
+        function buildGridAndEdges() {
+            // Делаем генерацию детерминированной при каждом пересчёте
+            randomSeed(globalSeed);
+            noiseSeed(globalSeed);
+
+            const h = artData.height;
+            const w = artData.width;
+
+            // 1) Точки узлов с лёгким смещением (но так, чтобы не вывезти за край холста)
+            gridPts = new Array(h + 1);
+            const jitter = stoneSize * 0.12;
+            for (let y = 0; y <= h; y++) {
+                gridPts[y] = new Array(w + 1);
+                for (let x = 0; x <= w; x++) {
+                    let baseX = x * stoneSize;
+                    let baseY = y * stoneSize;
+                    // Сохраняем крайние точки на сетке без смещения, чтобы не было зазоров у рамки
+                    let dx = (x === 0 || x === w) ? 0 : random(-jitter, jitter);
+                    let dy = (y === 0 || y === h) ? 0 : random(-jitter, jitter);
+                    gridPts[y][x] = createVector(baseX + dx, baseY + dy);
+                }
+            }
+
+            // 2) Рёбра как кубические Безье, общие для соседних камней
+            // Горизонтальные (включая верхнюю и нижнюю границы)
+            edgesH = new Array(h + 1);
+            for (let y = 0; y <= h; y++) {
+                edgesH[y] = new Array(w);
+                for (let x = 0; x < w; x++) {
+                    const A = gridPts[y][x];
+                    const B = gridPts[y][x + 1];
+                    edgesH[y][x] = makeCurvedEdge(A, B);
+                }
+            }
+            // Вертикальные (включая левую и правую границы)
+            edgesV = new Array(h);
+            for (let y = 0; y < h; y++) {
+                edgesV[y] = new Array(w + 1);
+                for (let x = 0; x <= w; x++) {
+                    const A = gridPts[y][x];
+                    const B = gridPts[y + 1][x];
+                    edgesV[y][x] = makeCurvedEdge(A, B);
+                }
+            }
+        }
+
+        function makeCurvedEdge(A, B) {
+            // Кривая Безье 3-го порядка с двумя контрольными точками по нормали к отрезку
+            const dir = p5.Vector.sub(B, A);
+            const len = max(1, dir.mag());
+            const n = createVector(-dir.y / len, dir.x / len); // нормаль
+            const ampBase = stoneSize * 0.18; // сила изгиба
+            const sign = random() < 0.5 ? -1 : 1;
+            const k1 = random(0.55, 1.1);
+            const k2 = random(0.55, 1.1);
+            const amp = ampBase * sign;
+            const P1 = p5.Vector.lerp(A, B, 1 / 3).add(p5.Vector.mult(n, amp * k1));
+            const P2 = p5.Vector.lerp(A, B, 2 / 3).add(p5.Vector.mult(n, amp * k2));
+            return { a: A.copy(), b: B.copy(), c1: P1, c2: P2 };
+        }
+
         function draw() {
-            background('#d7ccc8');
+            background(MORTAR_COLOR);
             for (let stone of stones) {
                 stone.draw();
             }
+            // Трещины в углах между камнями (поверх всего)
+            drawCornerCracks();
         }
         
         function mousePressed() {
@@ -190,6 +263,27 @@
             }
         }
 
+
+                        // --- Утилиты для оценки точки/касательной на кубике Безье ---
+                        function bezierPoint2D(edge, t) {
+                            const u = 1 - t;
+                            const uu = u * u, tt = t * t;
+                            const uuu = uu * u, ttt = tt * t;
+                            const x = edge.a.x * uuu + 3 * edge.c1.x * t * uu + 3 * edge.c2.x * tt * u + edge.b.x * ttt;
+                            const y = edge.a.y * uuu + 3 * edge.c1.y * t * uu + 3 * edge.c2.y * tt * u + edge.b.y * ttt;
+                            return createVector(x, y);
+                        }
+                        function bezierTangent2D(edge, t) {
+                            const u = 1 - t;
+                            const x = 3 * (edge.c1.x - edge.a.x) * u * u + 6 * (edge.c2.x - edge.c1.x) * u * t + 3 * (edge.b.x - edge.c2.x) * t * t;
+                            const y = 3 * (edge.c1.y - edge.a.y) * u * u + 6 * (edge.c2.y - edge.c1.y) * u * t + 3 * (edge.b.y - edge.c2.y) * t * t;
+                            return createVector(x, y);
+                        }
+                        function rnd01(x, y, slot) {
+                            // детерминированный «рандом» на основе noise и координат
+                            return noise((x * 37.17 + slot * 11.3 + globalSeed * 0.01) * 0.21,
+                                         (y * 61.7 + slot * 7.9 + globalSeed * 0.01) * 0.21);
+                        }
         class Stone {
             constructor(x, y, correctColorId) {
                 this.gridX = x;
@@ -204,29 +298,59 @@
             updatePosition() {
                 this.px = this.gridX * stoneSize;
                 this.py = this.gridY * stoneSize;
-                this.vertices = this.generateShape();
             }
-            
-            generateShape() {
-                const jitter = stoneSize * 0.25;
-                let shape = [];
-                shape.push(createVector(this.px + random(-jitter, jitter), this.py + random(-jitter, jitter)));
-                shape.push(createVector(this.px + stoneSize + random(-jitter, jitter), this.py + random(-jitter, jitter)));
-                shape.push(createVector(this.px + stoneSize + random(-jitter, jitter), this.py + stoneSize + random(-jitter, jitter)));
-                shape.push(createVector(this.px + random(-jitter, jitter), this.py + stoneSize + random(-jitter, jitter)));
-                return shape;
+
+            // Вспомогательная функция: обвести форму камня по согласованным кривым
+            traceShapePath() {
+                const gx = this.gridX;
+                const gy = this.gridY;
+                const A = gridPts[gy][gx]; // левый-верхний
+                // Рёбра этого камня (по часовой стрелке): верх, правое, низ, левое
+                const top = edgesH[gy][gx];
+                const right = edgesV[gy][gx + 1];
+                const bottom = edgesH[gy + 1][gx];
+                const left = edgesV[gy][gx];
+
+                // Начинаем с вершины A
+                beginShape();
+                vertex(A.x, A.y);
+                // Верх (из A в B)
+                bezierVertex(top.c1.x, top.c1.y, top.c2.x, top.c2.y, top.b.x, top.b.y);
+                // Правое (из правого-верхнего в правый-нижний)
+                bezierVertex(right.c1.x, right.c1.y, right.c2.x, right.c2.y, right.b.x, right.b.y);
+                // Низ (НАЗАД: из правого-нижнего в левый-нижний)
+                bezierVertex(bottom.c2.x, bottom.c2.y, bottom.c1.x, bottom.c1.y, bottom.a.x, bottom.a.y);
+                // Левое (НАЗАД: из левого-нижнего в левый-верхний)
+                bezierVertex(left.c2.x, left.c2.y, left.c1.x, left.c1.y, left.a.x, left.a.y);
+                endShape(CLOSE);
+            }
+
+            // Та же форма, но как путь Canvas 2D без отрисовки — для clip()
+            buildPathOnContext(ctx) {
+                const gx = this.gridX;
+                const gy = this.gridY;
+                const A = gridPts[gy][gx];
+                const top = edgesH[gy][gx];
+                const right = edgesV[gy][gx + 1];
+                const bottom = edgesH[gy + 1][gx];
+                const left = edgesV[gy][gx];
+
+                ctx.beginPath();
+                ctx.moveTo(A.x, A.y);
+                ctx.bezierCurveTo(top.c1.x, top.c1.y, top.c2.x, top.c2.y, top.b.x, top.b.y);
+                ctx.bezierCurveTo(right.c1.x, right.c1.y, right.c2.x, right.c2.y, right.b.x, right.b.y);
+                ctx.bezierCurveTo(bottom.c2.x, bottom.c2.y, bottom.c1.x, bottom.c1.y, bottom.a.x, bottom.a.y);
+                ctx.bezierCurveTo(left.c2.x, left.c2.y, left.c1.x, left.c1.y, left.a.x, left.a.y);
+                ctx.closePath();
             }
 
             // ⭐ НОВАЯ ФУНКЦИЯ ДЛЯ ОТРИСОВКИ ТЕКСТУРЫ ⭐
             drawTexture() {
                 // Создаем "маску" по форме камня, чтобы текстура не вылезала за края
-                drawingContext.save();
-                beginShape();
-                for (let v of this.vertices) {
-                    vertex(v.x, v.y);
-                }
-                endShape(CLOSE);
-                drawingContext.clip();
+                const ctx = drawingContext;
+                ctx.save();
+                this.buildPathOnContext(ctx);
+                ctx.clip();
 
                 // Рисуем несколько "прожилок" с помощью шума
                 for (let i = 0; i < 3; i++) { // 3 главные вены
@@ -249,14 +373,15 @@
                         ellipse(veinX, veinY, 3, 3);
                     }
                 }
-                drawingContext.restore(); // Снимаем маску
+                ctx.restore(); // Снимаем маску
             }
             
             draw() {
                 // 1. Рисуем основную форму и цвет камня
-                stroke(90, 80);
-                strokeWeight(2);
-                
+                stroke(MORTAR_COLOR);
+                const gap = max(1, stoneSize * 0.08); // ширина «затирки» между камнями
+                strokeWeight(gap);
+
                 let baseColor;
                 if (this.isColored) {
                     const colorInfo = artData.palette.find(p => p.id === this.correctColorId);
@@ -265,17 +390,14 @@
                     baseColor = color('#eceff1');
                 }
                 fill(baseColor);
-                
-                beginShape();
-                for (let v of this.vertices) {
-                    vertex(v.x, v.y);
-                }
-                endShape(CLOSE);
+                this.traceShapePath();
 
                 // 2. ⭐ Рисуем текстуру поверх основного цвета
                 if (this.isColored) {
                     this.drawTexture();
                 }
+                // 2.1. Небольшие сколы по краям (рисуются цветом затирки поверх камня)
+                this.drawChips();
                 
                 // 3. Рисуем номер, если нужно
                 if (!this.isColored && this.correctColorId) {
@@ -286,9 +408,52 @@
                     text(this.correctColorId, this.px + stoneSize / 2, this.py + stoneSize / 2);
                 }
             }
+
+            drawChips() {
+                    const gx = this.gridX, gy = this.gridY;
+                    const edges = [
+                        edgesH[gy][gx],          // top (A->B)
+                        edgesV[gy][gx + 1],      // right (A->B)
+                        edgesH[gy + 1][gx],      // bottom (A->B) but we’ll use reverse normal
+                        edgesV[gy][gx]           // left (A->B) but we’ll use reverse normal
+                    ];
+                    const ctx = drawingContext;
+                    // Ограничим чипсы областью камня, чтобы не выходили наружу
+                    ctx.save();
+                    this.buildPathOnContext(ctx);
+                    ctx.clip();
+                    noStroke();
+                    fill(MORTAR_COLOR);
+
+                    const chipsPerStone = 2 + floor(rnd01(gx, gy, 100) * 3); // 2..4
+                    const chipR = stoneSize * 0.1; // базовый размер скола
+                    for (let i = 0; i < chipsPerStone; i++) {
+                        const eIdx = floor(rnd01(gx, gy, 200 + i) * 4);
+                        const e = edges[eIdx];
+                        const t = constrain(rnd01(gx, gy, 300 + i), 0.15, 0.85); // избегаем самих углов (их рисуем отдельно)
+                        const p = bezierPoint2D(e, t);
+                        const tan = bezierTangent2D(e, t);
+                        if (tan.mag() < 0.0001) continue;
+                        tan.normalize();
+                        // Нормаль внутрь камня (для нижней/левой рёбер инвертируем знак)
+                        let n = createVector(-tan.y, tan.x);
+                        if (eIdx === 2 || eIdx === 3) n.mult(-1);
+                        const inset = stoneSize * (0.06 + rnd01(gx, gy, 400 + i) * 0.08);
+                        const cx = p.x + n.x * inset;
+                        const cy = p.y + n.y * inset;
+                        const r = chipR * (0.7 + rnd01(gx, gy, 500 + i) * 0.8);
+                        // Эллипс-скол
+                        push();
+                        translate(cx, cy);
+                        rotate(atan2(tan.y, tan.x));
+                        ellipse(0, 0, r * 1.2, r * 0.7);
+                        pop();
+                    }
+                    ctx.restore();
+                }
         }
 
-        function generatePalette() {
+    function generatePalette() {
             const paletteContainer = document.getElementById('palette-container');
             paletteContainer.innerHTML = ''; // Очищаем палитру перед генерацией
             artData.palette.forEach(colorItem => {
@@ -308,6 +473,62 @@
                 });
                 paletteContainer.appendChild(colorBox);
             });
+        }
+
+        function drawCornerCracks() {
+            const h = artData.height;
+            const w = artData.width;
+            const gap = max(1, stoneSize * 0.08);
+            const weight = max(1, gap * 0.9);
+            push();
+            stroke(MORTAR_COLOR);
+            strokeWeight(weight);
+            strokeCap(ROUND);
+            noFill();
+            for (let y = 0; y <= h; y++) {
+                for (let x = 0; x <= w; x++) {
+                    const p = gridPts[y][x];
+                    const branches = 2 + floor(rnd01(x, y, 900) * 3); // 2..4
+                    for (let b = 0; b < branches; b++) {
+                        // Базовый угол в одну из 8 направлений, чтобы выглядело естественнее
+                        const oct = floor(rnd01(x, y, 901 + b) * 8); // 0..7
+                        const baseAngle = oct * (PI / 4);
+                        const len = stoneSize * (0.12 + rnd01(x, y, 902 + b) * 0.18); // 0.12..0.30
+                        const steps = 6 + floor(rnd01(x, y, 903 + b) * 4); // 6..9
+                        const step = len / steps;
+                        let cx = p.x, cy = p.y;
+                        beginShape();
+                        vertex(cx, cy);
+                        for (let i = 0; i < steps; i++) {
+                            // Небольшая дрожь угла с перлин-шумом
+                            const t = i / max(1, steps - 1);
+                            const j = (noise((x + i) * 0.27 + globalSeed * 0.013, (y + b) * 0.29) - 0.5) * 0.6; // ~-0.3..0.3 рад
+                            const a = baseAngle + j + (rnd01(x, y, 910 + b * 13 + i) - 0.5) * 0.25;
+                            cx += cos(a) * step;
+                            cy += sin(a) * step;
+                            vertex(cx, cy);
+                        }
+                        endShape();
+                        // Небольшие ответвления (иногда)
+                        if (rnd01(x, y, 920 + b) > 0.6) {
+                            const a2 = baseAngle + (rnd01(x, y, 921 + b) - 0.5) * 0.8;
+                            const l2 = len * 0.45;
+                            const s2 = floor(steps * 0.5);
+                            let px = p.x, py = p.y;
+                            beginShape();
+                            vertex(px, py);
+                            for (let i = 0; i < s2; i++) {
+                                const a = a2 + (rnd01(x, y, 922 + i + b) - 0.5) * 0.35;
+                                px += cos(a) * (l2 / s2);
+                                py += sin(a) * (l2 / s2);
+                                vertex(px, py);
+                            }
+                            endShape();
+                        }
+                    }
+                }
+            }
+            pop();
         }
 
     </script>
