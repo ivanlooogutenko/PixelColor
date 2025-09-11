@@ -9,10 +9,15 @@ const artData = {
     ],
     pixels: [
         // Light Blue (id: 1)
-        { x: 1, y: 5, paletteId: 1 }, { x: 1, y: 6, paletteId: 1 },
-        { x: 2, y: 4, paletteId: 1 }, { x: 2, y: 5, paletteId: 1 }, { x: 2, y: 6, paletteId: 1 },
-        { x: 7, y: 4, paletteId: 1 }, { x: 7, y: 5, paletteId: 1 }, { x: 7, y: 6, paletteId: 1 },
-        { x: 8, y: 5, paletteId: 1 }, { x: 8, y: 6, paletteId: 1 },
+        { x: 3, y: 1, paletteId: 1 }, { x: 4, y: 1, paletteId: 1 }, { x: 5, y: 1, paletteId: 1 }, { x: 6, y: 1, paletteId: 1 },
+        { x: 2, y: 2, paletteId: 1 }, { x: 7, y: 2, paletteId: 1 },
+        { x: 2, y: 3, paletteId: 1 }, { x: 7, y: 3, paletteId: 1 },
+        { x: 1, y: 4, paletteId: 1 }, { x: 8, y: 4, paletteId: 1 },
+        { x: 0, y: 5, paletteId: 1 }, { x: 9, y: 5, paletteId: 1 },
+        { x: 0, y: 6, paletteId: 1 }, { x: 9, y: 6, paletteId: 1 },
+        { x: 1, y: 7, paletteId: 1 }, { x: 2, y: 7, paletteId: 1 }, { x: 7, y: 7, paletteId: 1 }, { x: 8, y: 7, paletteId: 1 },
+        { x: 3, y: 8, paletteId: 1 }, { x: 6, y: 8, paletteId: 1 },
+        { x: 4, y: 9, paletteId: 1 }, { x: 5, y: 9, paletteId: 1 },
 
         // Yellow (id: 2)
         { x: 4, y: 2, paletteId: 2 }, { x: 5, y: 2, paletteId: 2 },
