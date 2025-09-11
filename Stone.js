@@ -141,14 +141,9 @@ class Stone {
         const colorInfo = artData.palette.find(p => p.id === this.correctColorId);
         const baseC = color(colorInfo.color);
         
-        // Увеличиваем яркость
-        colorMode(HSB);
-        const highlightColor = color(
-            hue(baseC), 
-            saturation(baseC) * 0.8, // Немного уменьшаем насыщенность
-            min(100, brightness(baseC) + 30) // Увеличиваем яркость
-        );
-        colorMode(RGB);
+        // Смешиваем основной цвет с белым для получения блика
+        const whiteColor = color(255, 255, 255);
+        const highlightColor = lerpColor(baseC, whiteColor, 0.4); // 40% к белому
 
         fill(highlightColor);
         noStroke();
