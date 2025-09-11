@@ -141,10 +141,23 @@ function makeCurvedEdge(A, B) {
 
 function draw() {
     background(MORTAR_COLOR);
+    
+    // 1. Отрисовка всех камней (основа, тени, блики, текстуры)
     for (let stone of stones) {
         stone.draw();
     }
-    // Трещины в углах между камнями (поверх всего)
+
+    // 2. Применение эффекта зернистости ко всему холсту
+    loadPixels(); // Загружаем пиксели холста в массив pixels
+    for (let stone of stones) {
+        // Применяем зерно только к закрашенным камням
+        if (stone.isColored) {
+            stone.drawGrain();
+        }
+    }
+    updatePixels(); // Обновляем холст измененными пикселями
+
+    // 3. Отрисовка трещин поверх всего
     drawCornerCracks();
 }
 

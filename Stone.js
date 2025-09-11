@@ -169,6 +169,39 @@ class Stone {
         ctx.restore();
     }
 
+    drawGrain() {
+        // Этот метод теперь будет управлять шумом пикселей.
+        // Мы будем вызывать loadPixels() и updatePixels() в основном цикле отрисовки.
+        const x_start = floor(this.px);
+        const y_start = floor(this.py);
+        const x_end = ceil(this.px + stoneSize);
+        const y_end = ceil(this.py + stoneSize);
+
+        const d = pixelDensity();
+        const grainAmount = 80; // Интенсивность зерна (0-255)
+
+        for (let x = x_start; x < x_end; x++) {
+            for (let y = y_start; y < y_end; y++) {
+                // Пропускаем пиксели за пределами холста
+                if (x < 0 || x >= width || y < 0 || y >= height) continue;
+
+                // Генерируем значение шума для каждого пикселя
+                const noiseValue = (random() - 0.5) * grainAmount;
+
+                for (let i = 0; i < d; i++) {
+                    for (let j = 0; j < d; j++) {
+                        const pixelIndex = 4 * ((y * d + j) * width * d + (x * d + i));
+                        
+                        // Применяем шум к RGB каналам пикселя
+                        pixels[pixelIndex]     += noiseValue;
+                        pixels[pixelIndex + 1] += noiseValue;
+                        pixels[pixelIndex + 2] += noiseValue;
+                    }
+                }
+            }
+        }
+    }
+
     draw() {
         // 1. Рисуем основную форму и цвет камня
         stroke(MORTAR_COLOR);
@@ -189,6 +222,7 @@ class Stone {
         if (this.isColored) {
             this.drawShadow();
             this.drawHighlight();
+            this.drawGrain();
             this.drawTexture();
         }
         // 2.1. Небольшие сколы по краям (рисуются цветом затирки поверх камня)
