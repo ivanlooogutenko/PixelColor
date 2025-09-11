@@ -383,7 +383,7 @@
             draw() {
                 // 1. Рисуем основную форму и цвет камня
                 stroke(MORTAR_COLOR);
-                const gap = max(1, stoneSize * 0.08); // ширина «затирки» между камнями
+                const gap = max(0.5, stoneSize * 0.04); // ширина «затирки» (в 2 раза тоньше)
                 strokeWeight(gap);
 
                 let baseColor;
@@ -412,50 +412,48 @@
                     text(this.correctColorId, this.px + stoneSize / 2, this.py + stoneSize / 2);
                 }
             }
-
             drawChips() {
-                    const gx = this.gridX, gy = this.gridY;
-                    const edges = [
-                        edgesH[gy][gx],          // top (A->B)
-                        edgesV[gy][gx + 1],      // right (A->B)
-                        edgesH[gy + 1][gx],      // bottom (A->B) but we’ll use reverse normal
-                        edgesV[gy][gx]           // left (A->B) but we’ll use reverse normal
-                    ];
-                    const ctx = drawingContext;
-                    // Ограничим чипсы областью камня, чтобы не выходили наружу
-                    ctx.save();
-                    this.buildPathOnContext(ctx);
-                    ctx.clip();
-                    noStroke();
-                    fill(MORTAR_COLOR);
+                const gx = this.gridX, gy = this.gridY;
+                const edges = [
+                    edgesH[gy][gx],          // top (A->B)
+                    edgesV[gy][gx + 1],      // right (A->B)
+                    edgesH[gy + 1][gx],      // bottom (A->B)
+                    edgesV[gy][gx]           // left (A->B)
+                ];
+                const ctx = drawingContext;
+                ctx.save();
+                this.buildPathOnContext(ctx);
+                ctx.clip();
+                noStroke();
+                fill(MORTAR_COLOR);
 
-                    const chipsPerStone = 2 + floor(rnd01(gx, gy, 100) * 3); // 2..4
-                    const chipR = stoneSize * 0.1; // базовый размер скола
-                    for (let i = 0; i < chipsPerStone; i++) {
-                        const eIdx = floor(rnd01(gx, gy, 200 + i) * 4);
-                        const e = edges[eIdx];
-                        const t = constrain(rnd01(gx, gy, 300 + i), 0.15, 0.85); // избегаем самих углов (их рисуем отдельно)
-                        const p = bezierPoint2D(e, t);
-                        const tan = bezierTangent2D(e, t);
-                        if (tan.mag() < 0.0001) continue;
-                        tan.normalize();
-                        // Нормаль внутрь камня (для нижней/левой рёбер инвертируем знак)
-                        let n = createVector(-tan.y, tan.x);
-                        if (eIdx === 2 || eIdx === 3) n.mult(-1);
-                        const inset = stoneSize * (0.06 + rnd01(gx, gy, 400 + i) * 0.08);
-                        const cx = p.x + n.x * inset;
-                        const cy = p.y + n.y * inset;
-                        const r = chipR * (0.7 + rnd01(gx, gy, 500 + i) * 0.8);
-                        // Эллипс-скол
-                        push();
-                        translate(cx, cy);
-                        rotate(atan2(tan.y, tan.x));
-                        ellipse(0, 0, r * 1.2, r * 0.7);
-                        pop();
-                    }
-                    ctx.restore();
+                const chipsPerStone = 2 + floor(rnd01(gx, gy, 100) * 3); // 2..4
+                const chipR = stoneSize * 0.1;
+                for (let i = 0; i < chipsPerStone; i++) {
+                    const eIdx = floor(rnd01(gx, gy, 200 + i) * 4);
+                    const e = edges[eIdx];
+                    const t = constrain(rnd01(gx, gy, 300 + i), 0.15, 0.85);
+                    const p = bezierPoint2D(e, t);
+                    const tan = bezierTangent2D(e, t);
+                    if (tan.mag() < 0.0001) continue;
+                    tan.normalize();
+                    let n = createVector(-tan.y, tan.x);
+                    if (eIdx === 2 || eIdx === 3) n.mult(-1);
+                    const inset = stoneSize * (0.06 + rnd01(gx, gy, 400 + i) * 0.08);
+                    const cx = p.x + n.x * inset;
+                    const cy = p.y + n.y * inset;
+                    const r = chipR * (0.7 + rnd01(gx, gy, 500 + i) * 0.8);
+                    push();
+                    translate(cx, cy);
+                    rotate(atan2(tan.y, tan.x));
+                    // уменьшена ширина скола (было r*1.2)
+                    ellipse(0, 0, r * 0.6, r * 0.7);
+                    pop();
                 }
+                ctx.restore();
+            }
         }
+        
 
     function generatePalette() {
             const paletteContainer = document.getElementById('palette-container');
@@ -482,8 +480,8 @@
         function drawCornerCracks() {
             const h = artData.height;
             const w = artData.width;
-            const gap = max(1, stoneSize * 0.08);
-            const weight = max(1, gap * 0.9);
+            const gap = max(0.5, stoneSize * 0.04);
+            const weight = max(0.5, gap * 0.9);
             push();
             stroke(MORTAR_COLOR);
             strokeWeight(weight);
