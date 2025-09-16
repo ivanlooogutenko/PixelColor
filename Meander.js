@@ -1,6 +1,6 @@
 // Переработанная версия: корректные вертикальные узоры + внутренний отступ
 class MeanderBorder {
-    constructor(borderSize, speed = 0.15, innerPadding = 4) {
+    constructor(borderSize, speed = 0.25, innerPadding = 20) {
         this.borderSize = borderSize;      // Толщина полосы рамки
         this.speed = speed;                // Скорость движения узора
         this.innerPadding = innerPadding;  // Отступ внутри полосы для узора

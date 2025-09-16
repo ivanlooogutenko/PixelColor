@@ -1,4 +1,5 @@
-const BORDER_SIZE = 24; // Немного больше, чтобы узор + отступ смотрелись лучше
+const BORDER_SIZE = 24;
+const BORDER_INNER_GAP = 7; // Немного больше, чтобы узор + отступ смотрелись лучше
 const MORTAR_COLOR = '#1b1714'; // более тёмный фон/затирка
 const artData = {
     width: 10,
@@ -67,8 +68,8 @@ function initializeMosaic() {
     // Рассчитываем размер камня исходя из размера окна
     const padding = 40; // Отступы по бокам
     // Добавляем место для рамки в расчеты
-    const availableWidth = windowWidth - padding - 2 * BORDER_SIZE;
-    const availableHeight = windowHeight * 0.6 - 2 * BORDER_SIZE;
+    const availableWidth = windowWidth - padding - 2 * (BORDER_SIZE + BORDER_INNER_GAP);
+    const availableHeight = windowHeight * 0.6 - 2 * (BORDER_SIZE + BORDER_INNER_GAP);
 
     const sizeFromWidth = availableWidth / artData.width;
     const sizeFromHeight = availableHeight / artData.height;
@@ -79,9 +80,8 @@ function initializeMosaic() {
     let mosaicHeight = artData.height * stoneSize;
 
     // Общий размер холста = мозаика + рамка
-    let canvasWidth = mosaicWidth + 2 * BORDER_SIZE;
-    let canvasHeight = mosaicHeight + 2 * BORDER_SIZE;
-
+    let canvasWidth = mosaicWidth + 2 * (BORDER_SIZE + BORDER_INNER_GAP);
+    let canvasHeight = mosaicHeight + 2 * (BORDER_SIZE + BORDER_INNER_GAP);
     resizeCanvas(canvasWidth, canvasHeight);
 
     // Генерируем согласованные точки и кривые рёбра
@@ -164,7 +164,7 @@ function draw() {
     background(meanderBorder.bgColor);
 
     push();
-    translate(BORDER_SIZE, BORDER_SIZE);
+    translate(BORDER_SIZE + BORDER_INNER_GAP, BORDER_SIZE + BORDER_INNER_GAP);
     
     background(MORTAR_COLOR);
 
@@ -192,9 +192,9 @@ function draw() {
 
 function mousePressed() {
     // Корректируем координаты мыши с учетом рамки
-    const mosaicMouseX = mouseX - BORDER_SIZE;
-    const mosaicMouseY = mouseY - BORDER_SIZE;
-    
+    const mosaicMouseX = mouseX - (BORDER_SIZE + BORDER_INNER_GAP);
+    const mosaicMouseY = mouseY - (BORDER_SIZE + BORDER_INNER_GAP);
+
     const mosaicWidth = artData.width * stoneSize;
     const mosaicHeight = artData.height * stoneSize;
 

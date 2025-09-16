@@ -171,10 +171,10 @@ class Stone {
 
     drawGrain() {
         // Этот метод теперь будет управлять шумом пикселей.
-        const x_start = floor(this.px + BORDER_SIZE);
-        const y_start = floor(this.py + BORDER_SIZE);
-        const x_end = ceil(this.px + stoneSize + BORDER_SIZE);
-        const y_end = ceil(this.py + stoneSize + BORDER_SIZE);
+        const x_start = floor(this.px + BORDER_SIZE + BORDER_INNER_GAP);
+        const y_start = floor(this.py + BORDER_SIZE + BORDER_INNER_GAP);
+        const x_end = ceil(this.px + stoneSize + BORDER_SIZE + BORDER_INNER_GAP);
+        const y_end = ceil(this.py + stoneSize + BORDER_SIZE + BORDER_INNER_GAP);
 
         const d = pixelDensity();
         const grainAmount = 80; // Интенсивность зерна (0-255)
