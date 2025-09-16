@@ -1,3 +1,4 @@
+const BORDER_SIZE = 24; // Немного больше, чтобы узор + отступ смотрелись лучше
 const MORTAR_COLOR = '#1b1714'; // более тёмный фон/затирка
 const artData = {
     width: 10,
@@ -38,15 +39,18 @@ let stoneSize;
 let stones = [];
 let selectedColorId = null;
 let isPaletteGenerated = false;
+let meanderBorder;
 
 function setup() {
-    createCanvas(100, 100).parent('canvas-container'); // Временный холст
+    createCanvas(100, 100).parent('canvas-container');
+    // speed = 0.2, innerPadding = 4
+    meanderBorder = new MeanderBorder(BORDER_SIZE, 0.2, 4);
     initializeMosaic();
     if (!isPaletteGenerated) {
         generatePalette();
         isPaletteGenerated = true;
     }
-    noLoop();
+    loop(); // Запускаем цикл для анимации рамки
 }
 
 function windowResized() {
@@ -62,17 +66,21 @@ let globalSeed = 1337; // фиксированное зерно для дете�
 function initializeMosaic() {
     // Рассчитываем размер камня исходя из размера окна
     const padding = 40; // Отступы по бокам
-    const availableWidth = windowWidth - padding;
-    // Оставляем место для палитры и заголовка
-    const availableHeight = windowHeight * 0.6;
+    // Добавляем место для рамки в расчеты
+    const availableWidth = windowWidth - padding - 2 * BORDER_SIZE;
+    const availableHeight = windowHeight * 0.6 - 2 * BORDER_SIZE;
 
     const sizeFromWidth = availableWidth / artData.width;
     const sizeFromHeight = availableHeight / artData.height;
 
     stoneSize = floor(min(sizeFromWidth, sizeFromHeight));
 
-    let canvasWidth = artData.width * stoneSize;
-    let canvasHeight = artData.height * stoneSize;
+    let mosaicWidth = artData.width * stoneSize;
+    let mosaicHeight = artData.height * stoneSize;
+
+    // Общий размер холста = мозаика + рамка
+    let canvasWidth = mosaicWidth + 2 * BORDER_SIZE;
+    let canvasHeight = mosaicHeight + 2 * BORDER_SIZE;
 
     resizeCanvas(canvasWidth, canvasHeight);
 
@@ -153,32 +161,47 @@ function makeCurvedEdge(A, B) {
 }
 
 function draw() {
-    background(MORTAR_COLOR);
+    background(meanderBorder.bgColor);
+
+    push();
+    translate(BORDER_SIZE, BORDER_SIZE);
     
+    background(MORTAR_COLOR);
+
     // 1. Отрисовка всех камней (основа, тени, блики, текстуры)
     for (let stone of stones) {
         stone.draw();
     }
 
     // 2. Применение эффекта зернистости ко всему холсту
-    loadPixels(); // Загружаем пиксели холста в массив pixels
+    loadPixels();
     for (let stone of stones) {
-        // Применяем зерно только к закрашенным камням
         if (stone.isColored) {
             stone.drawGrain();
         }
     }
-    updatePixels(); // Обновляем холст измененными пикселями
+    updatePixels();
 
     // 3. Отрисовка трещин поверх всего
     drawCornerCracks();
+
+    pop();
+
+    meanderBorder.draw(); // Draw border on top
 }
 
 function mousePressed() {
-    if (mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height) return;
+    // Корректируем координаты мыши с учетом рамки
+    const mosaicMouseX = mouseX - BORDER_SIZE;
+    const mosaicMouseY = mouseY - BORDER_SIZE;
+    
+    const mosaicWidth = artData.width * stoneSize;
+    const mosaicHeight = artData.height * stoneSize;
 
-    const gridX = floor(mouseX / stoneSize);
-    const gridY = floor(mouseY / stoneSize);
+    if (mosaicMouseX < 0 || mosaicMouseX > mosaicWidth || mosaicMouseY < 0 || mosaicMouseY > mosaicHeight) return;
+
+    const gridX = floor(mosaicMouseX / stoneSize);
+    const gridY = floor(mosaicMouseY / stoneSize);
 
     // Проверяем, что координаты в пределах массива
     if (gridX >= 0 && gridX < artData.width && gridY >= 0 && gridY < artData.height) {

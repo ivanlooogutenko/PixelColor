@@ -58,7 +58,7 @@ class Stone {
         ctx.closePath();
     }
 
-    // ⭐ НОВАЯ ФУНКЦИЯ ДЛЯ ОТРИСОВКИ ТЕКСТУРЫ ⭐
+    // ⭐ ФУНКЦИЯ ДЛЯ ОТРИСОВКИ ТЕКСТУРЫ (оригинальная плавная версия) ⭐
     drawTexture() {
         // Создаем "маску" по форме камня, чтобы текстура не вылезала за края
         const ctx = drawingContext;
@@ -171,11 +171,10 @@ class Stone {
 
     drawGrain() {
         // Этот метод теперь будет управлять шумом пикселей.
-        // Мы будем вызывать loadPixels() и updatePixels() в основном цикле отрисовки.
-        const x_start = floor(this.px);
-        const y_start = floor(this.py);
-        const x_end = ceil(this.px + stoneSize);
-        const y_end = ceil(this.py + stoneSize);
+        const x_start = floor(this.px + BORDER_SIZE);
+        const y_start = floor(this.py + BORDER_SIZE);
+        const x_end = ceil(this.px + stoneSize + BORDER_SIZE);
+        const y_end = ceil(this.py + stoneSize + BORDER_SIZE);
 
         const d = pixelDensity();
         const grainAmount = 80; // Интенсивность зерна (0-255)
@@ -222,7 +221,7 @@ class Stone {
         if (this.isColored) {
             this.drawShadow();
             this.drawHighlight();
-            this.drawGrain();
+            // this.drawGrain(); // УДАЛЕНО: будет вызываться глобально
             this.drawTexture();
         }
         // 2.1. Небольшие сколы по краям (рисуются цветом затирки поверх камня)

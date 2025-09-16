@@ -47,7 +47,6 @@
         }
         /* Стиль для холста p5.js */
         canvas {
-            border: 10px solid #191412;
             box-shadow: 0 10px 20px rgba(0,0,0,0.2), inset 0 0 15px rgba(0,0,0,0.3);
             max-width: 100%;     /* Холст не будет вылезать за пределы экрана */
             height: auto;        /* Сохраняем пропорции */
